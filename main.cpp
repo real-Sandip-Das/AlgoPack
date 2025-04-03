@@ -248,6 +248,273 @@ public:
   };
 };
 
+template <typename T>
+class BST
+{
+private:
+  struct Node
+  {
+    T data;
+    Node * parent;
+    Node * left;
+    Node * right;
+
+    Node(const T & value) : data(value), parent(nullptr), left(nullptr), right(nullptr) {}
+  };
+
+  Node * root;
+  size_t size;
+
+  Node * getMinimumPtr(Node * x)
+  {
+    while (x->left) x = x->left;
+    return x;
+  }
+
+  Node * getMaximumPtr(Node * x)
+  {
+    while (x->right) x = x->right;
+    return x;
+  }
+
+  void transplant(Node * u, Node * v)
+  {
+    if (!(u->parent))
+      root = v;
+    else if (u == u->parent->left)
+      u->parent->left = v;
+    else
+      u->parent->right = v;
+    if (v) v->parent = u->parent;
+  }
+
+  Node * search_ptr(const T & data)
+  {
+    Node * x = root;
+    while (x && x->data != data) {
+      if (data < x->data)
+        x = x->left;
+      else
+        x = x->right;
+    }
+    return x;
+  }
+
+  void destroyRecursive(Node * node_ptr)
+  {
+    if (node_ptr->left) destroyRecursive(node_ptr->left);
+    if (node_ptr->right) destroyRecursive(node_ptr->right);
+    delete node_ptr;
+  }
+
+public:
+  class iterator;
+  class const_iterator;
+
+  BST() : root(nullptr), size(0) {}
+  ~BST()
+  {
+    if (root) destroyRecursive(root);
+  }
+
+  size_t getSize() { return size; }
+  bool empty() { return !size; }
+
+  void deleteNode(const T & data)
+  {
+    Node * z = search_ptr(data);
+    if (!z) return;
+    if (!(z->left))
+      transplant(z, z->right);
+    else if (!(z->right))
+      transplant(z, z->left);
+    else {
+      Node * y = getMinimumPtr(z->right);
+      if (y->parent != z) {
+        transplant(y, y->right);
+        y->right = z->right;
+        y->right->parent = y;
+      }
+      transplant(z, y);
+      y->left = z->left;
+      y->left->parent = y;
+    }
+    delete z;
+    --size;
+  }
+
+  void insert(const T & data)
+  {
+    Node * z = new Node(data);
+    Node * x = root;
+    Node * y = nullptr;
+    while (x) {
+      y = x;
+      if (data < x->data)
+        x = x->left;
+      else
+        x = x->right;
+    }
+    z->parent = y;
+    if (!y)
+      root = z;
+    else if (data < y->data)
+      y->left = z;
+    else
+      y->right = z;
+    ++size;
+  }
+
+  bool search(const T & data) { return search_ptr(data); }
+
+  T getMinimum()
+  {
+    if (empty()) throw out_of_range("Can't find minimum when empty.");
+    return getMinimumPtr(root)->data;
+  }
+
+  T getMaximum()
+  {
+    if (empty()) throw out_of_range("Can't find maximum when empty.");
+    return getMaximumPtr(root)->data;
+  }
+
+  iterator begin() { return iterator(getMinimumPtr(root)); }
+  iterator end() { return iterator(nullptr); }
+  const_iterator cbegin() const { return const_iterator(getMinimumPtr(root)); }
+  const_iterator cend() const { return const_iterator(nullptr); }
+
+  class iterator
+  {
+  private:
+    Node * current;
+    explicit iterator(Node * node) : current(node) {}
+    friend class BST;
+
+    Node * getSuccessor(Node * x)
+    {
+      if (x->right) {
+        Node * temp = x->right;
+        while (temp->left) temp = temp->left;
+        return temp;
+      }
+      Node * y = x->parent;
+      while (y && x == y->right) {
+        x = y;
+        y = y->parent;
+      }
+      return y;
+    }
+
+    Node * getPredecessor(Node * x)
+    {
+      if (x->left) {
+        Node * temp = x->left;
+        while (temp->right) temp = temp->right;
+        return temp;
+      }
+      Node * y = x->parent;
+      while (y && x == y->left) {
+        x = y;
+        y = y->parent;
+      }
+      return y;
+    }
+
+  public:
+    T & operator*() { return current->data; }
+    iterator & operator++()
+    {
+      current = getSuccessor(current);
+      return *this;
+    }
+    iterator operator++(int)
+    {
+      iterator temp = *this;
+      current = getSuccessor(current);
+      return temp;
+    }
+    iterator & operator--()
+    {
+      current = getPredecessor(current);
+      return *this;
+    }
+    iterator operator--(int)
+    {
+      iterator temp = *this;
+      current = getPredecessor(current);
+      return temp;
+    }
+    bool operator==(const iterator & other) const { return current == other.current; }
+    bool operator!=(const iterator & other) const { return current != other.current; }
+  };
+
+  class const_iterator
+  {
+  private:
+    const Node * current;
+    explicit const_iterator(const Node * node) : current(node) {}
+    friend class BST;
+
+    Node * getSuccessor(Node * x) const
+    {
+      if (x->right) {
+        Node * temp = x->right;
+        while (temp->left) temp = temp->left;
+        return temp;
+      }
+      Node * y = x->parent;
+      while (y && x == y->right) {
+        x = y;
+        y = y->parent;
+      }
+      return y;
+    }
+
+    Node * getPredecessor(Node * x) const
+    {
+      if (x->left) {
+        Node * temp = x->left;
+        while (temp->right) temp = temp->right;
+        return temp;
+      }
+      Node * y = x->parent;
+      while (y && x == y->left) {
+        x = y;
+        y = y->parent;
+      }
+      return y;
+    }
+
+  public:
+    const T & operator*() const { return current->data; }
+    const_iterator & operator++()
+    {
+      current = getSuccessor(const_cast<Node *>(current));
+      return *this;
+    }
+    const_iterator operator++(int)
+    {
+      const_iterator temp = *this;
+      current = getSuccessor(const_cast<Node *>(current));
+      return temp;
+    }
+    const_iterator & operator--()
+    {
+      current = getPredecessor(const_cast<Node *>(current));
+      return *this;
+    }
+    const_iterator operator--(int)
+    {
+      const_iterator temp = *this;
+      current = getPredecessor(const_cast<Node *>(current));
+      return temp;
+    }
+    bool operator==(const const_iterator & other) const { return current == other.current; }
+    bool operator!=(const const_iterator & other) const { return current != other.current; }
+  };
+};
+
 int main()
 {
   // testing LinkedList
@@ -268,4 +535,20 @@ int main()
   list.pop_front();
   for (auto i : list) cout << i << " ";
   cout << endl;
+
+  // testing BST
+  BST<int> bst;
+  bst.insert(10);
+  bst.insert(5);
+  bst.insert(15);
+  bst.insert(3);
+  bst.insert(7);
+
+  cout << "BST in-order traversal: ";
+  for (auto it = bst.begin(); it != bst.end(); ++it) {
+    cout << *it << " ";
+  }
+  cout << endl;
+
+  return 0;
 }
