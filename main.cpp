@@ -307,6 +307,54 @@ private:
     delete node_ptr;
   }
 
+  void left_rotate(Node * x)
+  {
+    if (!x || !x->right) return;  // Cannot rotate if x or its right child is null
+
+    Node * y = x->right;  // Set y as the right child of x
+
+    // Turn y's left subtree into x's right subtree
+    x->right = y->left;
+    if (y->left) y->left->parent = x;
+
+    // Link x's parent to y
+    y->parent = x->parent;
+    if (!x->parent)  // x was root
+      root = y;
+    else if (x == x->parent->left)  // x was left child
+      x->parent->left = y;
+    else  // x was right child
+      x->parent->right = y;
+
+    // Put x on y's left
+    y->left = x;
+    x->parent = y;
+  }
+
+  void right_rotate(Node * y)
+  {
+    if (!y || !y->left) return;  // Cannot rotate if y or its left child is null
+
+    Node * x = y->left;  // Set x as the left child of y
+
+    // Turn x's right subtree into y's left subtree
+    y->left = x->right;
+    if (x->right) x->right->parent = y;
+
+    // Link y's parent to x
+    x->parent = y->parent;
+    if (!y->parent)  // y was root
+      root = x;
+    else if (y == y->parent->left)  // y was left child
+      y->parent->left = x;
+    else  // y was right child
+      y->parent->right = x;
+
+    // Put y on x's right
+    x->right = y;
+    y->parent = x;
+  }
+
 public:
   class iterator;
   class const_iterator;
@@ -377,6 +425,24 @@ public:
   {
     if (empty()) throw out_of_range("Can't find maximum when empty.");
     return getMaximumPtr(root)->data;
+  }
+
+  bool left_rotate(const T & data)
+  {
+    Node * node = search_ptr(data);
+    if (!node || !node->right) return false;  // Node must exist and have a right child
+
+    left_rotate(node);
+    return true;
+  }
+
+  bool right_rotate(const T & data)
+  {
+    Node * node = search_ptr(data);
+    if (!node || !node->left) return false;  // Node must exist and have a left child
+
+    right_rotate(node);
+    return true;
   }
 
   iterator begin() { return iterator(getMinimumPtr(root)); }
@@ -543,11 +609,16 @@ int main()
   bst.insert(15);
   bst.insert(3);
   bst.insert(7);
-
   cout << "BST in-order traversal: ";
-  for (auto it = bst.begin(); it != bst.end(); ++it) {
-    cout << *it << " ";
-  }
+  for (auto i : bst) cout << i << " ";
+  cout << endl;
+  cout << "Performing left rotation on 5: ";
+  bst.left_rotate(5);
+  for (auto i : bst) cout << i << " ";
+  cout << endl;
+  cout << "Performing right rotation on 7: ";
+  bst.right_rotate(7);
+  for (auto i : bst) cout << i << " ";
   cout << endl;
 
   return 0;
